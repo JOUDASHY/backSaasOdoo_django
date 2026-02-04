@@ -97,4 +97,3 @@ class PaymentViewSet(viewsets.ModelViewSet):
         payment.status = "FAILED"
         payment.save()
         return Response({"status": "Payment rejected", "payment_id": payment.id}, status=status.HTTP_200_OK)
-
