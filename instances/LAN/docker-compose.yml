@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  db_LAN:
+    image: postgres:16
+    container_name: odoo_db_LAN
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: LAN
+      POSTGRES_PASSWORD: 005ee70bd439f53007f486707d21f2f3
+      POSTGRES_DB: LAN
+    volumes:
+      - LAN_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_LAN:
+    image: odoo:18
+    container_name: odoo_LAN
+    restart: unless-stopped
+    depends_on:
+      - db_LAN
+    environment:
+      HOST: db_LAN
+      PORT: 5432
+      USER: LAN
+      PASSWORD: 005ee70bd439f53007f486707d21f2f3
+      PGDATABASE: LAN
+    ports:
+      - "8071:8069"
+    volumes:
+      - LAN_data:/var/lib/odoo
+      - ../../addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  LAN_db_data:
+  LAN_data:
+
+networks:
+  odoo_network:
+    external: true

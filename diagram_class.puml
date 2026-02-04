@@ -1,0 +1,143 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class User {
+  +id: BigInteger
+  +username: String [unique]
+  +email: String
+  +password: String [hashed]
+  +is_staff: Boolean
+  +is_active: Boolean
+  +date_joined: DateTime
+  --
+  +get_role(): String
+}
+
+class Client {
+  +id: BigInteger
+  +company_name: String
+  +phone: String [nullable]
+  +address: Text [nullable]
+  +created_at: DateTime
+  --
+  +user: OneToOne[User]
+  +can_create_instance(): Boolean
+  +get_active_subscription(): Subscription
+}
+
+class Plan {
+  +id: BigInteger
+  +name: String [unique]
+  +price: Decimal
+  +max_users: Integer
+  +storage_limit_gb: Integer
+  +allowed_modules: JSON
+  +max_instances: Integer
+  +is_active: Boolean
+  +created_at: DateTime
+  --
+  +is_module_allowed(module_name): Boolean
+}
+
+class Subscription {
+  +id: BigInteger
+  +start_date: Date
+  +end_date: Date [nullable]
+  +status: String [ACTIVE|SUSPENDED|EXPIRED]
+  +auto_renew: Boolean
+  +billing_cycle: String [MONTHLY|YEARLY]
+  +next_billing_date: Date [nullable]
+  +created_at: DateTime
+  --
+  +client: ForeignKey[Client]
+  +plan: ForeignKey[Plan]
+  +is_active(): Boolean
+  +check_expiration(): void
+}
+
+class Payment {
+  +id: BigInteger
+  +amount: Decimal
+  +payment_date: DateTime
+  +method: String [CREDIT_CARD|BANK_TRANSFER|PAYPAL]
+  +status: String [PENDING|PAID|FAILED|REFUNDED]
+  +transaction_id: String [nullable]
+  +created_at: DateTime
+  --
+  +subscription: ForeignKey[Subscription]
+}
+
+class OdooInstance {
+  +id: BigInteger
+  +name: String [unique]
+  +container_name: String [unique]
+  +db_name: String
+  +db_password: String [encrypted]
+  +admin_password: String [encrypted]
+  +domain: String [unique]
+  +port: Integer [unique]
+  +status: String [CREATED|DEPLOYING|RUNNING|STOPPED|ERROR]
+  +odoo_version: String
+  +created_at: DateTime
+  +updated_at: DateTime
+  --
+  +client: ForeignKey[Client]
+  +subscription: ForeignKey[Subscription]
+  +start(): void
+  +stop(): void
+  +restart(): void
+  +delete(): void
+}
+
+class DeploymentLog {
+  +id: BigInteger
+  +timestamp: DateTime
+  +action: String [CREATE|START|STOP|RESTART|DELETE|UPDATE]
+  +status: String [SUCCESS|FAILED|IN_PROGRESS]
+  +details: JSON
+  +error_message: Text [nullable]
+  +duration_seconds: Integer [nullable]
+  --
+  +instance: ForeignKey[OdooInstance]
+  +user: ForeignKey[User] [nullable]
+}
+
+' Relations principales
+User "1" ||--|| "1" Client : "has profile"
+Client "1" ||--o{ "*" Subscription : "subscribes"
+Plan "1" ||--o{ "*" Subscription : "defines"
+Subscription "1" ||--o{ "*" Payment : "has payments"
+Client "1" ||--o{ "*" OdooInstance : "owns"
+Subscription "1" ||--o{ "*" OdooInstance : "provides access"
+OdooInstance "1" ||--o{ "*" DeploymentLog : "logs actions"
+User "0..1" ||--o{ "*" DeploymentLog : "performed by"
+
+note right of User
+  **Rôle:**
+  - ADMIN: is_staff=True
+  - CLIENT: is_staff=False + Client profile
+end note
+
+note right of OdooInstance
+  **Auto-déploiement:**
+  - container_name utilisé dans docker-compose.yml
+  - Génération automatique des fichiers Docker
+  - Gestion du cycle de vie (start/stop/restart)
+end note
+
+note right of DeploymentLog
+  **Traçabilité:**
+  - Toutes les actions sont loggées
+  - Permet le débogage et l'audit
+  - Suivi des performances (duration_seconds)
+end note
+
+note right of Plan
+  **Limites du plan:**
+  - max_users: limite d'utilisateurs Odoo
+  - max_instances: nombre max d'instances
+  - allowed_modules: modules autorisés
+  - storage_limit_gb: stockage max
+end note
+
+@enduml

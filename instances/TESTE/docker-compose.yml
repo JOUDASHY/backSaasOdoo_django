@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  db_TESTE:
+    image: postgres:16
+    container_name: odoo_db_TESTE
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: TESTE
+      POSTGRES_PASSWORD: b0d62cbd870b57d90e1f0ecc0d4de548
+      POSTGRES_DB: TESTE
+    volumes:
+      - TESTE_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_TESTE:
+    image: odoo:18
+    container_name: odoo_TESTE
+    restart: unless-stopped
+    depends_on:
+      - db_TESTE
+    environment:
+      HOST: db_TESTE
+      PORT: 5432
+      USER: TESTE
+      PASSWORD: b0d62cbd870b57d90e1f0ecc0d4de548
+      PGDATABASE: TESTE
+    ports:
+      - "8072:8069"
+    volumes:
+      - TESTE_data:/var/lib/odoo
+      - ../../addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  TESTE_db_data:
+  TESTE_data:
+
+networks:
+  odoo_network:
+    external: true

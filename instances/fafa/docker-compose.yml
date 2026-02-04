@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  db_fafa:
+    image: postgres:16
+    container_name: odoo_db_fafa
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fafa
+      POSTGRES_PASSWORD: be0c9f9fdb1720b07213023d752998e7
+      POSTGRES_DB: fafa
+    volumes:
+      - fafa_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_fafa:
+    image: odoo:18
+    container_name: odoo_fafa
+    restart: unless-stopped
+    depends_on:
+      - db_fafa
+    environment:
+      HOST: db_fafa
+      PORT: 5432
+      USER: fafa
+      PASSWORD: be0c9f9fdb1720b07213023d752998e7
+      PGDATABASE: fafa
+    ports:
+      - "8074:8069"
+    volumes:
+      - fafa_data:/var/lib/odoo
+      - ../../addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  fafa_db_data:
+  fafa_data:
+
+networks:
+  odoo_network:
+    external: true

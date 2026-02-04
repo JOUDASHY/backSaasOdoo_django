@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  db_unit:
+    image: postgres:16
+    container_name: odoo_db_unit
+    environment:
+      POSTGRES_USER: unit
+      POSTGRES_PASSWORD: 58c112f5cdc3bbd70e4c91ad88b137e9
+      POSTGRES_DB: unit
+    volumes:
+      - unit_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_unit:
+    image: odoo:18
+    container_name: odoo_unit
+    depends_on:
+      - db_unit
+    environment:
+      HOST: db_unit
+      PORT: 5432
+      USER: unit
+      PASSWORD: 58c112f5cdc3bbd70e4c91ad88b137e9
+      PGDATABASE: unit
+    ports:
+      - "8071:8069"
+    volumes:
+      - unit_data:/var/lib/odoo
+      - ../../addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  unit_db_data:
+  unit_data:
+
+networks:
+  odoo_network:
+    external: true

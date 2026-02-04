@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  db_akata:
+    image: postgres:16
+    container_name: odoo_db_akata
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: akata
+      POSTGRES_PASSWORD: 9cefe2c01ee8849b51e3935c79581742
+      POSTGRES_DB: akata
+    volumes:
+      - akata_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_akata:
+    image: odoo:18
+    container_name: odoo_akata
+    restart: unless-stopped
+    depends_on:
+      - db_akata
+    environment:
+      HOST: db_akata
+      PORT: 5432
+      USER: akata
+      PASSWORD: 9cefe2c01ee8849b51e3935c79581742
+      PGDATABASE: akata
+    ports:
+      - "8073:8069"
+    volumes:
+      - akata_data:/var/lib/odoo
+      - ../../addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  akata_db_data:
+  akata_data:
+
+networks:
+  odoo_network:
+    external: true

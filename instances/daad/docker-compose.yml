@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  db_daad:
+    image: postgres:16
+    container_name: odoo_db_daad
+    environment:
+      POSTGRES_USER: daad
+      POSTGRES_PASSWORD: 4b3a0581efebdffc33b08ec7f2793c75
+      POSTGRES_DB: daad
+    volumes:
+      - daad_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_daad:
+    image: odoo:18
+    container_name: odoo_daad
+    depends_on:
+      - db_daad
+    environment:
+      HOST: db_daad
+      PORT: 5432
+      USER: daad
+      PASSWORD: 4b3a0581efebdffc33b08ec7f2793c75
+      PGDATABASE: daad
+    ports:
+      - "8072:8069"
+    volumes:
+      - daad_data:/var/lib/odoo
+      - ../../addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  daad_db_data:
+  daad_data:
+
+networks:
+  odoo_network:
+    external: true

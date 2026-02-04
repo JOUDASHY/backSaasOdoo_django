@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  db_client4:
+    image: postgres:16
+    container_name: odoo_db_client4
+    environment:
+      POSTGRES_USER: client4
+      POSTGRES_PASSWORD: 32aaa8dd343cab4bd8f93c2820f88ef4
+      POSTGRES_DB: client4
+    volumes:
+      - client4_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_client4:
+    image: odoo:18
+    container_name: odoo_client4
+    depends_on:
+      - db_client4
+    environment:
+      HOST: db_client4
+      PORT: 5432
+      USER: client4
+      PASSWORD: 32aaa8dd343cab4bd8f93c2820f88ef4
+      PGDATABASE: client4
+    ports:
+      - "8070:8069"
+    volumes:
+      - client4_data:/var/lib/odoo
+      - ../../addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  client4_db_data:
+  client4_data:
+
+networks:
+  odoo_network:
+    external: true

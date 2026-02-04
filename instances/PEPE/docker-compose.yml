@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  db_PEPE:
+    image: postgres:16
+    container_name: odoo_db_PEPE
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: PEPE
+      POSTGRES_PASSWORD: 070cee545730baf1ced402c67f162591
+      POSTGRES_DB: PEPE
+    volumes:
+      - PEPE_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_PEPE:
+    image: odoo:18
+    container_name: odoo_PEPE
+    restart: unless-stopped
+    depends_on:
+      - db_PEPE
+    environment:
+      HOST: db_PEPE
+      PORT: 5432
+      USER: PEPE
+      PASSWORD: 070cee545730baf1ced402c67f162591
+      PGDATABASE: PEPE
+    ports:
+      - "8075:8069"
+    volumes:
+      - PEPE_data:/var/lib/odoo
+      - ../../addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  PEPE_db_data:
+  PEPE_data:
+
+networks:
+  odoo_network:
+    external: true
