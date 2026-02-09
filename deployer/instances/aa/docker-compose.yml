@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  db_aa:
+    image: postgres:16
+    container_name: odoo_db_aa
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aa
+      POSTGRES_PASSWORD: f9c6654b5d38b1c8a11a9f271b372734
+      POSTGRES_DB: aa
+    volumes:
+      - aa_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_aa:
+    image: odoo:18
+    container_name: odoo_aa
+    restart: unless-stopped
+    depends_on:
+      - db_aa
+    environment:
+      HOST: db_aa
+      PORT: 5432
+      USER: aa
+      PASSWORD: f9c6654b5d38b1c8a11a9f271b372734
+      PGDATABASE: aa
+      ALLOWED_MODULES: base,web,mail,contacts,calendar,crm,sale,purchase,stock,account,project,hr,helpdesk,website,mass_mailing,documents,sign,voip,knowledge,studio
+    ports:
+      - "8077:8069"
+    volumes:
+      - aa_data:/var/lib/odoo
+      - /home/nilsen-un-it/odoo-saas-project/saas_backend/deployer/instances/aa/addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  aa_db_data:
+  aa_data:
+
+networks:
+  odoo_network:
+    external: true

@@ -41,6 +41,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     plan_name = serializers.CharField(source='plan.name', read_only=True)
     plan_price = serializers.DecimalField(source='plan.price', max_digits=10, decimal_places=2, read_only=True)
     client_company = serializers.CharField(source='client.company_name', read_only=True)
+    plan_allowed_modules = serializers.ListField(source='plan.allowed_modules', child=serializers.CharField(), read_only=True)
     is_active_status = serializers.SerializerMethodField()
     
     class Meta:

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_module_form_saas_restrict" model="ir.ui.view">
+        <field name="name">ir.module.module.form.saas.restrict</field>
+        <field name="model">ir.module.module</field>
+        <field name="inherit_id" ref="base.module_form"/>
+        <field name="arch" type="xml">
+            <!-- Cacher le bouton Installer/Activer natif quand le module n'est pas autorisé -->
+            <xpath expr="//button[@name='button_immediate_install']" position="attributes">
+                <attribute name="invisible">not can_install</attribute>
+            </xpath>
+            <!-- Bouton personnalisé pour demander la mise à niveau du forfait -->
+            <!-- On ne rajoute plus de bouton séparé : le clic sur "Activer"
+                 ouvrira directement le wizard via button_immediate_install. -->
+        </field>
+    </record>
+
+    <record id="view_module_kanban_saas_restrict" model="ir.ui.view">
+        <field name="name">ir.module.module.kanban.saas.restrict</field>
+        <field name="model">ir.module.module</field>
+        <field name="inherit_id" ref="base.module_view_kanban"/>
+        <field name="arch" type="xml">
+            <!-- Cacher le bouton Installer/Activer natif en kanban quand le module n'est pas autorisé -->
+            <xpath expr="//button[@name='button_immediate_install']" position="attributes">
+                <attribute name="invisible">not can_install</attribute>
+            </xpath>
+            <!-- Bouton personnalisé pour demander la mise à niveau du forfait -->
+            <!-- Même logique en kanban: pas de bouton supplémentaire, tout
+                 passe par le bouton standard et la surcharge Python. -->
+        </field>
+    </record>
+</odoo>

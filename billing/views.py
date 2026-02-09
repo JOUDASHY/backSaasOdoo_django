@@ -79,7 +79,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         # Set default method to MANUAL if not provided
         if not serializer.validated_data.get("method"):
             serializer.validated_data["method"] = "MANUAL"
-        
+
         serializer.save()
 
     @action(detail=True, methods=["post"], permission_classes=[permissions.IsAdminUser])

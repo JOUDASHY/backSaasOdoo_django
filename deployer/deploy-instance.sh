@@ -10,7 +10,12 @@ DOMAIN="${2:-${INSTANCE_NAME}.localhost}"
 PORT="${3:-8070}"
 ODOO_VERSION="${4:-18}"
 ADMIN_PASSWORD="${5:-admin}"
-MODULES="${6:-base}"
+# 6ème argument : modules initiaux installés lors de la création de la base
+# On installe toujours le noyau web + notre module de restriction
+# pour que l'interface Odoo fonctionne ET que les restrictions soient actives.
+INITIAL_MODULES="${6:-base,web,saas_module_restriction}"
+# 7ème argument : modules autorisés par le plan (ALLOWED_MODULES pour Odoo)
+ALLOWED_MODULES="${7:-${INITIAL_MODULES}}"
 DB_NAME="${INSTANCE_NAME}"
 DB_USER="${INSTANCE_NAME}"
 DB_PASSWORD="$(openssl rand -hex 16)"
@@ -131,10 +136,11 @@ class IrModuleModule(models.Model):
             for module in self:
                 module.can_install = True
             return
-        
+
         for module in self:
-            # Only show install button if module is not installed and is in allowed list
-            module.can_install = module.state == 'uninstalled' and module.name in allowed_modules
+            # Autoriser installation/activation seulement si le module est
+            # 'uninstalled' ou 'to_buy' ET présent dans la liste autorisée.
+            module.can_install = module.state in ('uninstalled', 'to_buy') and module.name in allowed_modules
 
     @api.depends('name', 'state')
     def _compute_needs_upgrade(self):
@@ -145,7 +151,9 @@ class IrModuleModule(models.Model):
             return
 
         for module in self:
-            module.needs_upgrade = module.state == 'uninstalled' and module.name not in allowed_modules
+            # Demander une mise à niveau si le module est installable/activable
+            # (uninstalled/to_buy) mais non inclus dans les modules autorisés.
+            module.needs_upgrade = module.state in ('uninstalled', 'to_buy') and module.name not in allowed_modules
 
     def _get_upgrade_url(self, module_name: str):
         """
@@ -179,31 +187,25 @@ class IrModuleModule(models.Model):
         return module_name in allowed_modules
 
     def button_immediate_install(self):
-        """Override install to check if module is allowed"""
+        """
+        Override install to check if module is allowed.
+        - Si autorisé: comportement normal d'Odoo.
+        - Si NON autorisé: au lieu d'une erreur technique, on ouvre le wizard
+          "Mettre à niveau le forfait" (un seul bouton côté UI: Activer).
+        """
         for module in self:
             if not self._check_module_allowed(module.name):
-                allowed_modules = self._get_allowed_modules()
-                if allowed_modules:
-                    allowed_list = sorted(list(allowed_modules))
-                    raise UserError(_(
-                        "Module '%s' is not allowed in your plan.\n\n"
-                        "Allowed modules: %s\n\n"
-                        "Please contact support to upgrade your plan if you need this module."
-                    ) % (module.name, ', '.join(allowed_list)))
+                # Ouvrir directement le wizard d'upgrade pour ce module
+                return module.action_request_upgrade()
         return super().button_immediate_install()
 
     def button_install(self):
-        """Override install (non-immediate) to check if module is allowed"""
+        """
+        Override install (non-immediate) pour la même logique que ci‑dessus.
+        """
         for module in self:
             if not self._check_module_allowed(module.name):
-                allowed_modules = self._get_allowed_modules()
-                if allowed_modules:
-                    allowed_list = sorted(list(allowed_modules))
-                    raise UserError(_(
-                        "Module '%s' is not allowed in your plan.\n\n"
-                        "Allowed modules: %s\n\n"
-                        "Please contact support to upgrade your plan if you need this module."
-                    ) % (module.name, ', '.join(allowed_list)))
+                return module.action_request_upgrade()
         return super().button_install()
 MODEL_EOF
 
@@ -363,16 +365,13 @@ cat > "${MODULE_RESTRICTION_DIR}/views/ir_module_module_views.xml" <<'VIEWS_EOF'
         <field name="model">ir.module.module</field>
         <field name="inherit_id" ref="base.module_form"/>
         <field name="arch" type="xml">
+            <!-- Cacher le bouton Installer/Activer natif quand le module n'est pas autorisé -->
             <xpath expr="//button[@name='button_immediate_install']" position="attributes">
-                <attribute name="invisible">to_buy or state != 'uninstalled' or not can_install</attribute>
+                <attribute name="invisible">not can_install</attribute>
             </xpath>
-            <xpath expr="//button[@name='button_immediate_install']" position="after">
-                <button name="action_request_upgrade"
-                        type="object"
-                        string="Mettre à niveau le forfait"
-                        class="btn-primary"
-                        invisible="not needs_upgrade"/>
-            </xpath>
+            <!-- Bouton personnalisé pour demander la mise à niveau du forfait -->
+            <!-- On ne rajoute plus de bouton séparé : le clic sur "Activer"
+                 ouvrira directement le wizard via button_immediate_install. -->
         </field>
     </record>
 
@@ -381,16 +380,13 @@ cat > "${MODULE_RESTRICTION_DIR}/views/ir_module_module_views.xml" <<'VIEWS_EOF'
         <field name="model">ir.module.module</field>
         <field name="inherit_id" ref="base.module_view_kanban"/>
         <field name="arch" type="xml">
+            <!-- Cacher le bouton Installer/Activer natif en kanban quand le module n'est pas autorisé -->
             <xpath expr="//button[@name='button_immediate_install']" position="attributes">
-                <attribute name="invisible">to_buy or state != 'uninstalled' or not can_install</attribute>
+                <attribute name="invisible">not can_install</attribute>
             </xpath>
-            <xpath expr="//button[@name='button_immediate_install']" position="after">
-                <button name="action_request_upgrade"
-                        type="object"
-                        string="Mettre à niveau le forfait"
-                        class="btn-primary"
-                        invisible="not needs_upgrade"/>
-            </xpath>
+            <!-- Bouton personnalisé pour demander la mise à niveau du forfait -->
+            <!-- Même logique en kanban: pas de bouton supplémentaire, tout
+                 passe par le bouton standard et la surcharge Python. -->
         </field>
     </record>
 </odoo>
@@ -458,7 +454,7 @@ services:
       USER: ${DB_USER}
       PASSWORD: ${DB_PASSWORD}
       PGDATABASE: ${DB_NAME}
-      ALLOWED_MODULES: ${MODULES}
+      ALLOWED_MODULES: ${ALLOWED_MODULES}
     ports:
       - "${PORT}:8069"
     volumes:
@@ -489,12 +485,12 @@ echo "⏳ Attente du démarrage de la base de données..."
 sleep 5
 
 # Attendre que PostgreSQL soit prêt et initialiser Odoo avec les modules
-echo "⏳ Initialisation de la base de données Odoo (Modules: ${MODULES})..."
+echo "⏳ Initialisation de la base de données Odoo (Modules initiaux: ${INITIAL_MODULES})..."
 MAX_RETRIES=30
 RETRY=0
 INIT_SUCCESS=false
 while [ ${RETRY} -lt ${MAX_RETRIES} ]; do
-    if docker exec odoo_${INSTANCE_NAME} odoo --stop-after-init -d ${DB_NAME} -r ${DB_USER} -w ${DB_PASSWORD} --db_host=db_${INSTANCE_NAME} --db_port=5432 -i ${MODULES} >/dev/null 2>&1; then
+    if docker exec odoo_${INSTANCE_NAME} odoo --stop-after-init -d ${DB_NAME} -r ${DB_USER} -w ${DB_PASSWORD} --db_host=db_${INSTANCE_NAME} --db_port=5432 -i ${INITIAL_MODULES} >/dev/null 2>&1; then
         echo "✅ Base de données initialisée avec succès!"
         echo "🔐 Configuration du mot de passe administrateur..."
         docker exec odoo_db_${INSTANCE_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "UPDATE res_users SET password='${ADMIN_PASSWORD}' WHERE id=2;" >/dev/null 2>&1

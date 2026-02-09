@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_module_form_saas_restrict" model="ir.ui.view">
+        <field name="name">ir.module.module.form.saas.restrict</field>
+        <field name="model">ir.module.module</field>
+        <field name="inherit_id" ref="base.module_form"/>
+        <field name="arch" type="xml">
+            <!-- Cacher le bouton Installer natif quand le module n'est pas autorisé -->
+            <xpath expr="//button[@name='button_immediate_install']" position="attributes">
+                <attribute name="invisible">to_buy or state != 'uninstalled' or not can_install</attribute>
+            </xpath>
+            <!-- Cacher le bouton \"Activate\" d'Odoo (modules to_buy) quand le module n'est pas autorisé -->
+            <xpath expr="//button[@string='Activate']" position="attributes">
+                <attribute name="invisible">needs_upgrade</attribute>
+            </xpath>
+            <!-- Bouton personnalisé pour demander la mise à niveau du forfait -->
+            <xpath expr="//button[@name='button_immediate_install']" position="after">
+                <button name="action_request_upgrade"
+                        type="object"
+                        string="Mettre à niveau le forfait"
+                        class="btn-primary"
+                        invisible="not needs_upgrade"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_module_kanban_saas_restrict" model="ir.ui.view">
+        <field name="name">ir.module.module.kanban.saas.restrict</field>
+        <field name="model">ir.module.module</field>
+        <field name="inherit_id" ref="base.module_view_kanban"/>
+        <field name="arch" type="xml">
+            <!-- Cacher le bouton Installer natif en kanban quand le module n'est pas autorisé -->
+            <xpath expr="//button[@name='button_immediate_install']" position="attributes">
+                <attribute name="invisible">to_buy or state != 'uninstalled' or not can_install</attribute>
+            </xpath>
+            <!-- Cacher le bouton \"Activate\" en kanban quand le module n'est pas autorisé -->
+            <xpath expr="//button[@string='Activate']" position="attributes">
+                <attribute name="invisible">needs_upgrade</attribute>
+            </xpath>
+            <!-- Bouton personnalisé pour demander la mise à niveau du forfait -->
+            <xpath expr="//button[@name='button_immediate_install']" position="after">
+                <button name="action_request_upgrade"
+                        type="object"
+                        string="Mettre à niveau le forfait"
+                        class="btn-primary"
+                        invisible="not needs_upgrade"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

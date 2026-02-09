@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  db_tana:
+    image: postgres:16
+    container_name: odoo_db_tana
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tana
+      POSTGRES_PASSWORD: 6d0e54da1213ac2d5b63f6f790039abb
+      POSTGRES_DB: tana
+    volumes:
+      - tana_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_tana:
+    image: odoo:18
+    container_name: odoo_tana
+    restart: unless-stopped
+    depends_on:
+      - db_tana
+    environment:
+      HOST: db_tana
+      PORT: 5432
+      USER: tana
+      PASSWORD: 6d0e54da1213ac2d5b63f6f790039abb
+      PGDATABASE: tana
+      ALLOWED_MODULES: base,web,mail,contacts,calendar,crm,sale,purchase,stock,account,project,hr,helpdesk,website,mass_mailing,documents,sign,voip,knowledge,studio
+    ports:
+      - "8078:8069"
+    volumes:
+      - tana_data:/var/lib/odoo
+      - /home/nilsen-un-it/odoo-saas-project/saas_backend/deployer/instances/tana/addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  tana_db_data:
+  tana_data:
+
+networks:
+  odoo_network:
+    external: true

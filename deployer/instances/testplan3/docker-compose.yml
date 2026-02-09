@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  db_testplan3:
+    image: postgres:16
+    container_name: odoo_db_testplan3
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: testplan3
+      POSTGRES_PASSWORD: 6831aa866be47d80246f33eada83e883
+      POSTGRES_DB: testplan3
+    volumes:
+      - testplan3_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_network
+
+  odoo_testplan3:
+    image: odoo:18
+    container_name: odoo_testplan3
+    restart: unless-stopped
+    depends_on:
+      - db_testplan3
+    environment:
+      HOST: db_testplan3
+      PORT: 5432
+      USER: testplan3
+      PASSWORD: 6831aa866be47d80246f33eada83e883
+      PGDATABASE: testplan3
+      ALLOWED_MODULES: website,web
+    ports:
+      - "8081:8069"
+    volumes:
+      - testplan3_data:/var/lib/odoo
+      - /home/nilsen-un-it/odoo-saas-project/saas_backend/deployer/instances/testplan3/addons:/mnt/extra-addons
+    networks:
+      - odoo_network
+
+volumes:
+  testplan3_db_data:
+  testplan3_data:
+
+networks:
+  odoo_network:
+    external: true

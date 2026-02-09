@@ -94,8 +94,8 @@ class OdooInstanceViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         try:
             script_path = str(settings.BASE_DIR / "deployer" / "manage-instances.sh")
-            # In manage-instances.sh it's 'remove'
-            subprocess.run(["bash", script_path, "remove", instance.name], check=True)
+            # In manage-instances.sh it's 'remove' (3ème argument --force pour éviter la question interactive)
+            subprocess.run(["bash", script_path, "remove", instance.name, "--force"], check=True)
             instance.delete()
             return Response({"status": "Instance removed"})
         except Exception as e:
@@ -155,16 +155,27 @@ class OdooInstanceViewSet(viewsets.ModelViewSet):
             instance.save()
 
             script_path = str(settings.BASE_DIR / "deployer" / "deploy-instance.sh")
-            modules = ",".join(instance.subscription.plan.allowed_modules) or "base"
+
+            # Tous les modules fonctionnels (Website, CRM, etc.) doivent être
+            # installés manuellement par le client.
+            # On installe toujours :
+            # - le noyau web pour que l'interface Odoo fonctionne
+            # - le module saas_module_restriction pour appliquer les restrictions
+            initial_modules = "base,web,saas_module_restriction"
+
+            # ALLOWED_MODULES = liste complète des modules autorisés par le plan
+            allowed = instance.subscription.plan.allowed_modules or []
+            allowed_csv = ",".join(allowed)
             cmd = [
                 "bash",
                 script_path,
-                instance.name, 
-                instance.domain, 
-                str(instance.port), 
+                instance.name,
+                instance.domain,
+                str(instance.port),
                 instance.odoo_version,
                 instance.admin_password,
-                modules
+                initial_modules,
+                allowed_csv,
             ]
             result = subprocess.run(cmd, capture_output=True, text=True)
 

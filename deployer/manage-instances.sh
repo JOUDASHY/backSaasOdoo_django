@@ -8,6 +8,7 @@ set -e
 
 ACTION="${1}"
 INSTANCE_NAME="${2}"
+FORCE_FLAG="${3}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTANCES_DIR="${SCRIPT_DIR}/instances"
 
@@ -33,7 +34,7 @@ list_instances() {
     if [ ! -d "${INSTANCES_DIR}" ] || [ -z "$(ls -A ${INSTANCES_DIR} 2>/dev/null)" ]; then
         echo "   Aucune instance trouvée"
         return
-    }
+    fi
     
     for instance in "${INSTANCES_DIR}"/*; do
         if [ -d "${instance}" ]; then
@@ -45,7 +46,7 @@ list_instances() {
                 else
                     status="🔴 Arrêtée"
                     port="N/A"
-                }
+                fi
                 echo "   - ${name}: ${status} (Port: ${port})"
             else
                 echo "   - ${name}: ⚪ Non déployée"
@@ -59,7 +60,7 @@ get_instance_info() {
     if [ -z "${name}" ]; then
         echo "❌ Erreur: Nom d'instance requis"
         exit 1
-    }
+    fi
     
     local instance_dir="${INSTANCES_DIR}/${name}"
     if [ ! -d "${instance_dir}" ]; then
@@ -128,10 +129,14 @@ remove_instance() {
     local instance_dir=$(get_instance_info "${INSTANCE_NAME}")
     echo "⚠️  Suppression de l'instance: ${INSTANCE_NAME}"
     echo ""
-    read -p "Voulez-vous vraiment supprimer cette instance ? (o/N) " confirm
-    if [[ ! "${confirm}" =~ ^[oO]$ ]]; then
-        echo "Abandon."
-        exit 0
+
+    # Si le script est appelé avec le 3ème argument \"--force\", on ne pose pas la question
+    if [ "${FORCE_FLAG}" != "--force" ]; then
+        read -p "Voulez-vous vraiment supprimer cette instance ? (o/N) " confirm
+        if [[ ! "${confirm}" =~ ^[oO]$ ]]; then
+            echo "Abandon."
+            exit 0
+        fi
     fi
     
     cd "${instance_dir}"
